@@ -4,7 +4,12 @@ App = {
 
   init: async function() {
     
-
+    $(function(){
+      $("#awardTab a").click(function(e){
+          e.preventDefault();
+          $(this).tab("show");
+      });
+    })
     return await App.initWeb3();
   },
 
@@ -48,6 +53,15 @@ App = {
 
   bindEvents: function() {
     $(document).on('click', '.btn-award', App.handleAward);
+    $(document).on('click', '.btn-add-admin', App.handleAddAdmin);
+    $(document).on('click', '.btn-del-admin', App.handleRemoveAdmin);
+
+  //   $("#awardTab a").click(function(e){
+  //     e.preventDefault();
+  //     console.log(this);
+  //     console.log($(this));
+  //     $(this).tab("show");
+  // });
   },
 
   loadReward: function() {
@@ -93,8 +107,32 @@ App = {
         awardRow.append(awardTemplate.html());
       }
 
+    }).then(function(){
+      App.loadAdmin();
+    }).catch(function(err) {
+      console.log(err.message);
+    });
+    
+  },
+  loadAdmin: function() {
+    
+    App.contracts.EYReward.deployed().then(function(instance) {
+      eyRewardInstance = instance;
       
+    }).then(function(result) {
+      return eyRewardInstance.getAdminList();      
+    }).then(function(list){
+      console.log("name",list);
 
+      var adminRow = $('#adminRow');
+      var adminTemplate = $('#adminTemplate');
+      adminRow.empty();
+      for (i = 0; i < list.length; i ++) {
+        if(list[i]=='0x0000000000000000000000000000000000000000') continue;
+        adminTemplate.find('.leader-admin').text(list[i]);
+        adminTemplate.find('.btn-del-admin').attr('data-id', list[i]);
+        adminRow.append(adminTemplate.html());
+      }
     }).catch(function(err) {
       console.log(err.message);
     });
@@ -137,6 +175,70 @@ App = {
       }).then(function(result) {
         console.log(result);
         return App.loadReward();
+      }).catch(function(err) {
+        console.log(err.message);
+      });
+    });
+  },
+  handleAddAdmin: function(event) {
+    event.preventDefault();
+
+    var admin = $("#leader-admin").val();
+
+    var eyRewardInstance;
+
+    web3.eth.getAccounts(function(error, accounts) {
+      if (error) {
+        console.log(error);
+      }
+
+      var account = accounts[0];
+      //console.log(account);
+      //console.log(admin);
+
+      App.contracts.EYReward.deployed().then(function(instance) {
+        eyRewardInstance = instance;
+      }).then(function(result) {
+        //console.log(eyRewardInstance);
+        return eyRewardInstance.addAdmin(admin,{from:account});
+      }).then(function(result) {
+        //console.log(result);
+        return App.loadAdmin();
+      }).catch(function(err) {
+        console.log(err);
+        console.log(err.message);
+      });
+    });
+  },
+  handleRemoveAdmin: function(event) {
+    event.preventDefault();
+
+    //var admin = $("#leader-admin").val();
+    var admin = $(event.target).data('id');
+
+    if(admin=='0x0000000000000000000000000000000000000000'){
+      return;
+    }
+    console.log("admin",admin);
+    var eyRewardInstance;
+
+    web3.eth.getAccounts(function(error, accounts) {
+      if (error) {
+        console.log(error);
+      }
+
+      var account = accounts[0];
+      //console.log(account);
+      //console.log(admin);
+
+      App.contracts.EYReward.deployed().then(function(instance) {
+        eyRewardInstance = instance;
+      }).then(function(result) {
+        console.log(eyRewardInstance);
+        return eyRewardInstance.removeAdmin(admin,{from:account});
+      }).then(function(result) {
+        console.log(result);
+        return App.loadAdmin();
       }).catch(function(err) {
         console.log(err.message);
       });
